@@ -1,0 +1,29 @@
+#!/bin/bash
+
+args=("$@")
+
+if [[ $# -eq 0 ]];  then
+	echo "!! No hostname in argument"
+	echo " usage: "
+	echo " savessh <hostname>"
+	exit 1
+fi
+username=$(whoami)
+server=$1
+echo -e "Password: \c"
+read -s password
+
+if [ $(dpkg-query -W -f='${Status}' sshpass 2>/dev/null | grep -c "ok installed") -eq 0 ]; then
+	
+	echo "Missing dependency: sshpass"
+	echo "apt-get install sshpass"
+	echo "yum install sshpass"
+	exit 1
+fi
+echo "Connectiong to <$server> and placing .ssh/id_dsa.pub"
+sshpass -p $password ssh $username@$1 "mkdir -p ~/.ssh/ && touch ~/.ssh/authorized_keys"
+sshpass -p $password scp ~/.ssh/id_dsa.pub $username@$1:~/.ssh/id_dsa.pub
+echo "Appending to authorized_keys.."
+sshpass -p $password ssh $username@$1 'cat ~/.ssh/id_dsa.pub >> ~/.ssh/authorized_keys && chmod 700 ~/.ssh/ -R && chmod 600 ~/.ssh/authorized_keys'
+echo "Done.."
+ssh $server
